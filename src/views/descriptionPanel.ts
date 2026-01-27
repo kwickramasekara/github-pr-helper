@@ -161,7 +161,8 @@ export class DescriptionPanel {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}' https://cdnjs.cloudflare.com;">
+  <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
   <title>PR Description</title>
   <style>
     body {
@@ -303,18 +304,13 @@ export class DescriptionPanel {
     const regenerateBtn = document.getElementById('regenerate');
     const status = document.getElementById('status');
 
-    // Simple markdown to HTML (basic)
+    // Use marked library for proper markdown rendering
     function renderMarkdown(md) {
-      return md
-        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-        .replace(/\\*\\*(.*)\\*\\*/gm, '<strong>$1</strong>')
-        .replace(/\\*(.*)\\*/gm, '<em>$1</em>')
-        .replace(/\`([^\`]+)\`/gm, '<code>$1</code>')
-        .replace(/^- (.*$)/gm, '<li>$1</li>')
-        .replace(/(<li>.*<\\/li>)/s, '<ul>$1</ul>')
-        .replace(/\\n/g, '<br>');
+      if (typeof marked !== 'undefined' && marked.parse) {
+        return marked.parse(md || '(No description)');
+      }
+      // Fallback if marked not loaded
+      return md || '(No description)';
     }
 
     preview.innerHTML = renderMarkdown(editor.value || '(No description)');
