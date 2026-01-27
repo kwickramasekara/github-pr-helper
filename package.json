@@ -1,0 +1,245 @@
+{
+  "name": "github-pr-helper",
+  "displayName": "GitHub PR Helper",
+  "description": "Streamline GitHub pull request creation with AI-powered descriptions using Google Gemini",
+  "version": "0.0.1",
+  "publisher": "kwickramasekara",
+  "repository": "https://github.com/kwickramasekara/github-pr-helper",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "SCM Providers"
+  ],
+  "keywords": [
+    "github",
+    "pull request",
+    "pr",
+    "git",
+    "gemini",
+    "ai"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "githubPrHelper.createPr",
+        "title": "Create Pull Request",
+        "category": "GitHub PR Helper",
+        "icon": "$(add)"
+      },
+      {
+        "command": "githubPrHelper.refreshPr",
+        "title": "Refresh",
+        "category": "GitHub PR Helper",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "githubPrHelper.openSettings",
+        "title": "Settings",
+        "category": "GitHub PR Helper",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "githubPrHelper.markReady",
+        "title": "Mark as Ready for Review",
+        "category": "GitHub PR Helper",
+        "icon": "$(check)"
+      },
+      {
+        "command": "githubPrHelper.openInGitHub",
+        "title": "Open in GitHub",
+        "category": "GitHub PR Helper",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "githubPrHelper.editTitle",
+        "title": "Edit Title",
+        "category": "GitHub PR Helper",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "githubPrHelper.viewDescription",
+        "title": "View/Edit Description",
+        "category": "GitHub PR Helper",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "githubPrHelper.addReviewer",
+        "title": "Add Reviewer",
+        "category": "GitHub PR Helper",
+        "icon": "$(add)"
+      },
+      {
+        "command": "githubPrHelper.removeReviewer",
+        "title": "Remove Reviewer",
+        "category": "GitHub PR Helper",
+        "icon": "$(close)"
+      },
+      {
+        "command": "githubPrHelper.regenerate",
+        "title": "Regenerate with AI",
+        "category": "GitHub PR Helper",
+        "icon": "$(sparkle)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "githubPrHelper.createPr",
+          "when": "view == githubPrHelper.prView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "githubPrHelper.refreshPr",
+          "when": "view == githubPrHelper.prView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "githubPrHelper.openInGitHub",
+          "when": "view == githubPrHelper.prView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "githubPrHelper.openSettings",
+          "when": "view == githubPrHelper.prView",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "githubPrHelper.editTitle",
+          "when": "view == githubPrHelper.prView && viewItem == prTitle",
+          "group": "inline"
+        },
+        {
+          "command": "githubPrHelper.viewDescription",
+          "when": "view == githubPrHelper.prView && viewItem == prDescription",
+          "group": "inline"
+        },
+        {
+          "command": "githubPrHelper.addReviewer",
+          "when": "view == githubPrHelper.prView && viewItem == reviewersHeader",
+          "group": "inline"
+        },
+        {
+          "command": "githubPrHelper.removeReviewer",
+          "when": "view == githubPrHelper.prView && viewItem == reviewer",
+          "group": "inline"
+        },
+        {
+          "command": "githubPrHelper.markReady",
+          "when": "view == githubPrHelper.prView && viewItem == prStatusDraft",
+          "group": "inline"
+        },
+        {
+          "command": "githubPrHelper.regenerate",
+          "when": "view == githubPrHelper.prView && viewItem == prDescription",
+          "group": "inline@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "GitHub PR Helper",
+      "properties": {
+        "githubPrHelper.geminiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Google Gemini API key for PR description generation",
+          "order": 1
+        },
+        "githubPrHelper.baseBranch": {
+          "type": "string",
+          "default": "main",
+          "description": "Default base branch for PRs",
+          "order": 2
+        },
+        "githubPrHelper.defaultReviewers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Default reviewers (GitHub usernames or team slugs)",
+          "order": 3
+        },
+        "githubPrHelper.titleTemplate": {
+          "type": "string",
+          "default": "Generate a concise PR title (max 72 chars) that summarizes the changes",
+          "description": "Custom instructions for LLM title generation",
+          "order": 4
+        },
+        "githubPrHelper.descriptionTemplate": {
+          "type": "string",
+          "default": "Generate a PR description with: ## Summary, ## Changes Made (bullet points), ## Testing Notes",
+          "description": "Custom instructions for LLM description generation",
+          "order": 5
+        },
+        "githubPrHelper.promptOnBranchPublish": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "always",
+            "never"
+          ],
+          "enumDescriptions": [
+            "Ask before creating a PR when pushing a new branch",
+            "Always create a PR when pushing a new branch",
+            "Never prompt to create a PR"
+          ],
+          "default": "ask",
+          "description": "Behavior when a branch is published to remote",
+          "order": 6
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "github-pr-helper",
+          "title": "GitHub PR Helper",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "github-pr-helper": [
+        {
+          "id": "githubPrHelper.prView",
+          "name": "Pull Request"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "githubPrHelper.prView",
+        "contents": "No pull request found for this branch.\n[Create Pull Request](command:githubPrHelper.createPr)\n[Open Settings](command:githubPrHelper.openSettings)"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vscode/test-electron": "^2.3.8",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.2"
+  },
+  "dependencies": {
+    "marked": "^12.0.0"
+  },
+  "license": "MIT"
+}
