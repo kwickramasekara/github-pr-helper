@@ -5,6 +5,7 @@
   "version": "0.0.1",
   "publisher": "kwickramasekara",
   "repository": "https://github.com/kwickramasekara/github-pr-helper",
+  "icon": "resources/icon.png",
   "engines": {
     "vscode": "^1.85.0"
   },
