@@ -2,7 +2,7 @@
   "name": "github-pr-helper",
   "displayName": "GitHub PR Helper",
   "description": "Streamline GitHub pull request creation with AI-powered descriptions using Google Gemini",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "kwickramasekara",
   "repository": "https://github.com/kwickramasekara/github-pr-helper",
   "icon": "resources/icon.png",
