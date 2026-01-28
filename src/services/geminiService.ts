@@ -34,6 +34,7 @@ export class GeminiService {
     diff: string,
     titleTemplate: string,
     descriptionTemplate: string,
+    branchName?: string,
   ): Promise<GeminiPrContent> {
     if (!this.isConfigured()) {
       throw new Error(
@@ -41,12 +42,16 @@ export class GeminiService {
       );
     }
 
+    const branchInfo = branchName ? `\nBranch Name: ${branchName}` : "";
+
     const prompt = `You are a helpful assistant that generates GitHub Pull Request titles and descriptions.
 
 Title Instructions: ${titleTemplate}
 Description Instructions: ${descriptionTemplate}
+${branchInfo}
 
-Based on the following git diff, generate a PR title and description. The title should be concise and descriptive. The description should follow the template instructions provided.
+Based on the following git diff, generate a PR title and description. The title should be concise and descriptive. The description should follow the template instructions provided. 
+${!branchName ? "" : `Use the git branch name to fill in any placeholders in the template.`}
 
 \`\`\`diff
 ${diff}

@@ -273,6 +273,7 @@ async function createPr(): Promise<void> {
           const { diff, wasTruncated } = await ghService.getDiff(
             config.baseBranch,
           );
+          const branchName = await ghService.getCurrentBranch();
 
           if (wasTruncated) {
             vscode.window.showWarningMessage(
@@ -284,6 +285,7 @@ async function createPr(): Promise<void> {
             diff,
             config.titleTemplate,
             config.descriptionTemplate,
+            branchName,
           );
 
           await ghService.updatePr({
@@ -330,6 +332,7 @@ async function regenerateContent(): Promise<void> {
         const { diff, wasTruncated } = await ghService.getDiff(
           config.baseBranch,
         );
+        const branchName = await ghService.getCurrentBranch();
 
         if (wasTruncated) {
           vscode.window.showWarningMessage(
@@ -341,6 +344,7 @@ async function regenerateContent(): Promise<void> {
           diff,
           config.titleTemplate,
           config.descriptionTemplate,
+          branchName,
         );
 
         await ghService.updatePr({

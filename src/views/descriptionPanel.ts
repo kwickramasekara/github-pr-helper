@@ -118,6 +118,7 @@ export class DescriptionPanel {
       const { diff, wasTruncated } = await this.ghService.getDiff(
         config.baseBranch,
       );
+      const branchName = await this.ghService.getCurrentBranch();
 
       if (wasTruncated) {
         vscode.window.showWarningMessage(
@@ -129,6 +130,7 @@ export class DescriptionPanel {
         diff,
         config.titleTemplate,
         config.descriptionTemplate,
+        branchName,
       );
 
       // Save both title and description
