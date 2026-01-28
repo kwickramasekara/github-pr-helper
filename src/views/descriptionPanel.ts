@@ -194,7 +194,8 @@ export class DescriptionPanel {
     }
     .tab.active {
       opacity: 1;
-      border-bottom-color: var(--vscode-focusBorder);
+      background-color: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
     }
     .tab:hover {
       opacity: 1;
@@ -291,7 +292,7 @@ export class DescriptionPanel {
     <textarea id="editor">${this._escapeHtml(this._description)}</textarea>
     <div class="actions">
       <button class="primary" id="save">Save</button>
-      <button class="secondary" id="regenerate">🔄 Regenerate with AI</button>
+      <button class="secondary" id="regenerate">Regenerate with AI</button>
     </div>
     <div class="status" id="status"></div>
   </div>
