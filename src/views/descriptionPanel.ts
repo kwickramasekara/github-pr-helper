@@ -176,6 +176,13 @@ export class DescriptionPanel {
       max-width: 800px;
       margin: 0 auto;
     }
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+    }
     .tabs {
       display: flex;
       gap: 8px;
@@ -190,12 +197,12 @@ export class DescriptionPanel {
       color: var(--vscode-foreground);
       opacity: 0.7;
       border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
     }
     .tab.active {
       opacity: 1;
       background-color: var(--vscode-button-background);
       color: var(--vscode-button-foreground);
+      border-radius: 4px 4px 0 0;
     }
     .tab:hover {
       opacity: 1;
@@ -247,13 +254,6 @@ export class DescriptionPanel {
       display: flex;
       gap: 8px;
       margin-top: 16px;
-    }
-    button {
-      padding: 8px 16px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 13px;
     }
     .primary {
       background: var(--vscode-button-background);
