@@ -44,6 +44,10 @@ export class ConfigService {
     );
   }
 
+  get enableCopilotReviewer(): boolean {
+    return this.config.get<boolean>("enableCopilotReviewer", false);
+  }
+
   /** Get all configuration as an object */
   getAll(): ExtensionConfig {
     return {
@@ -53,6 +57,7 @@ export class ConfigService {
       titleTemplate: this.titleTemplate,
       descriptionTemplate: this.descriptionTemplate,
       promptOnBranchPublish: this.promptOnBranchPublish,
+      enableCopilotReviewer: this.enableCopilotReviewer,
     };
   }
 

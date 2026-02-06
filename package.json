@@ -76,6 +76,12 @@
         "icon": "$(add)"
       },
       {
+        "command": "githubPrHelper.addCopilotReviewer",
+        "title": "Add Copilot Reviewer",
+        "category": "GitHub PR Helper",
+        "icon": "$(hubot)"
+      },
+      {
         "command": "githubPrHelper.removeReviewer",
         "title": "Remove Reviewer",
         "category": "GitHub PR Helper",
@@ -126,6 +132,11 @@
           "command": "githubPrHelper.addReviewer",
           "when": "view == githubPrHelper.prView && viewItem == reviewersHeader",
           "group": "inline"
+        },
+        {
+          "command": "githubPrHelper.addCopilotReviewer",
+          "when": "view == githubPrHelper.prView && viewItem == reviewersHeader",
+          "group": "inline@2"
         },
         {
           "command": "githubPrHelper.removeReviewer",
@@ -195,6 +206,12 @@
           "default": "ask",
           "description": "Behavior when a branch is published to remote",
           "order": 6
+        },
+        "githubPrHelper.enableCopilotReviewer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically assign GitHub Copilot as a reviewer when creating PRs",
+          "order": 7
         }
       }
     },

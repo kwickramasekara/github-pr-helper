@@ -10,6 +10,7 @@ export interface ExtensionConfig {
   titleTemplate: string;
   descriptionTemplate: string;
   promptOnBranchPublish: "ask" | "always" | "never";
+  enableCopilotReviewer: boolean;
 }
 
 /** GitHub user information */

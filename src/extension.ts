@@ -67,6 +67,16 @@ export function activate(context: vscode.ExtensionContext): void {
  * Initialize the extension
  */
 async function initialize(): Promise<void> {
+  // Setup copilot alias regardless of auth status
+  try {
+    const hasAlias = await ghService.hasCopilotAlias();
+    if (!hasAlias) {
+      await ghService.setupCopilotAlias();
+    }
+  } catch {
+    // Silently fail - alias setup will be retried when needed
+  }
+
   const status = await ghService.isAuthenticated();
 
   if (!status.authenticated && status.error) {
@@ -205,6 +215,36 @@ function registerCommands(context: vscode.ExtensionContext): void {
     }),
   );
 
+  // Add Copilot Reviewer
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "githubPrHelper.addCopilotReviewer",
+      async () => {
+        const pr = prTreeProvider.prDetails;
+        if (!pr) {
+          vscode.window.showWarningMessage("No PR found for this branch.");
+          return;
+        }
+
+        try {
+          // Ensure alias is set up
+          const hasAlias = await ghService.hasCopilotAlias();
+          if (!hasAlias) {
+            await ghService.setupCopilotAlias();
+          }
+
+          await ghService.assignCopilotReviewer(pr.number);
+          vscode.window.showInformationMessage(
+            "GitHub Copilot assigned as reviewer!",
+          );
+          await prTreeProvider.refresh();
+        } catch (error) {
+          showNotification(error instanceof Error ? error.message : "Failed");
+        }
+      },
+    ),
+  );
+
   // Remove Reviewer
   context.subscriptions.push(
     vscode.commands.registerCommand(
@@ -309,6 +349,23 @@ async function createPr(): Promise<void> {
 
     vscode.window.showInformationMessage("Draft PR created!");
     await prTreeProvider.refresh();
+
+    // Assign Copilot reviewer if enabled
+    if (config.enableCopilotReviewer) {
+      const pr = prTreeProvider.prDetails;
+      if (pr) {
+        try {
+          await ghService.assignCopilotReviewer(pr.number);
+          vscode.window.showInformationMessage("GitHub Copilot assigned as reviewer!");
+          await prTreeProvider.refresh();
+        } catch (error) {
+          console.error("Failed to assign Copilot reviewer:", error);
+          vscode.window.showWarningMessage(
+            "Could not assign GitHub Copilot as reviewer. You can add it manually."
+          );
+        }
+      }
+    }
   } catch (error) {
     showNotification(
       error instanceof Error ? error.message : "Failed to create PR",

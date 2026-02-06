@@ -300,6 +300,49 @@ export class GitHubCliService {
   }
 
   /**
+   * Setup the gh alias for copilot-review command
+   * This should be called once during extension activation
+   */
+  async setupCopilotAlias(): Promise<void> {
+    try {
+      await this.execute(
+        'gh alias set copilot-review \'api --method POST /repos/$1/pulls/$2/requested_reviewers -f "reviewers[]=copilot-pull-request-reviewer[bot]"\''
+      );
+    } catch (error) {
+      console.error("Failed to setup copilot alias:", error);
+    }
+  }
+
+  /**
+   * Check if the copilot-review alias is set up
+   */
+  async hasCopilotAlias(): Promise<boolean> {
+    try {
+      const result = await this.execute("gh alias list");
+      return result.includes("copilot-review");
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Assign GitHub Copilot as a reviewer to the current PR
+   */
+  async assignCopilotReviewer(prNumber: number): Promise<void> {
+    const remoteUrl = await this.execute("git remote get-url origin");
+    const match = remoteUrl.match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
+    
+    if (!match) {
+      throw new Error("Could not parse repository owner/name from remote URL");
+    }
+
+    const owner = match[1];
+    const repo = match[2];
+    
+    await this.execute(`gh copilot-review ${owner}/${repo} ${prNumber}`);
+  }
+
+  /**
    * Escape special characters for shell arguments
    */
   private escapeShellArg(arg: string): string {
