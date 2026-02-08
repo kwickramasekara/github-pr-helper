@@ -85,3 +85,20 @@ export type ExtensionMessage =
   | { type: "error"; message: string }
   | { type: "success"; message: string }
   | { type: "ghCliStatus"; isAuthenticated: boolean; error?: string };
+
+/** Statistics about the diff */
+export interface DiffStats {
+  filesChanged: number;
+  linesAdded: number;
+  linesDeleted: number;
+  filesSkipped: string[];
+  filesTruncated: string[];
+}
+
+/** Result from getDiff with enhanced metadata */
+export interface DiffResult {
+  diff: string;
+  stats: DiffStats;
+  commitMessages: string[];
+  wasTruncated: boolean;
+}

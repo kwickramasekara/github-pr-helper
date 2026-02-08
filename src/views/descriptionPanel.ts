@@ -115,19 +115,19 @@ export class DescriptionPanel {
       this._panel.webview.postMessage({ type: "regenerating" });
 
       const config = this.configService.getAll();
-      const { diff, wasTruncated } = await this.ghService.getDiff(
-        config.baseBranch,
-      );
+      const diffResult = await this.ghService.getDiff(config.baseBranch);
       const branchName = await this.ghService.getCurrentBranch();
 
-      if (wasTruncated) {
+      if (diffResult.wasTruncated) {
+        const truncatedCount = diffResult.stats.filesTruncated.length;
+        const skippedCount = diffResult.stats.filesSkipped.length;
         vscode.window.showWarningMessage(
-          "Some files were truncated. AI description may be incomplete.",
+          `${truncatedCount} file(s) truncated, ${skippedCount} noise file(s) skipped. AI description based on filtered diff.`,
         );
       }
 
       const content = await this.geminiService.generatePrContent(
-        diff,
+        diffResult,
         config.titleTemplate,
         config.descriptionTemplate,
         branchName,

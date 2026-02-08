@@ -310,19 +310,19 @@ async function createPr(): Promise<void> {
         progress.report({ message: "Generating content with AI..." });
 
         if (geminiService.isConfigured()) {
-          const { diff, wasTruncated } = await ghService.getDiff(
-            config.baseBranch,
-          );
+          const diffResult = await ghService.getDiff(config.baseBranch);
           const branchName = await ghService.getCurrentBranch();
 
-          if (wasTruncated) {
+          if (diffResult.wasTruncated) {
+            const truncatedCount = diffResult.stats.filesTruncated.length;
+            const skippedCount = diffResult.stats.filesSkipped.length;
             vscode.window.showWarningMessage(
-              "Some files were truncated. AI description may be incomplete.",
+              `${truncatedCount} file(s) truncated, ${skippedCount} noise file(s) skipped. AI description based on filtered diff.`,
             );
           }
 
           const content = await geminiService.generatePrContent(
-            diff,
+            diffResult,
             config.titleTemplate,
             config.descriptionTemplate,
             branchName,
@@ -356,12 +356,14 @@ async function createPr(): Promise<void> {
       if (pr) {
         try {
           await ghService.assignCopilotReviewer(pr.number);
-          vscode.window.showInformationMessage("GitHub Copilot assigned as reviewer!");
+          vscode.window.showInformationMessage(
+            "GitHub Copilot assigned as reviewer!",
+          );
           await prTreeProvider.refresh();
         } catch (error) {
           console.error("Failed to assign Copilot reviewer:", error);
           vscode.window.showWarningMessage(
-            "Could not assign GitHub Copilot as reviewer. You can add it manually."
+            "Could not assign GitHub Copilot as reviewer. You can add it manually.",
           );
         }
       }
@@ -386,19 +388,19 @@ async function regenerateContent(): Promise<void> {
       },
       async () => {
         const config = configService.getAll();
-        const { diff, wasTruncated } = await ghService.getDiff(
-          config.baseBranch,
-        );
+        const diffResult = await ghService.getDiff(config.baseBranch);
         const branchName = await ghService.getCurrentBranch();
 
-        if (wasTruncated) {
+        if (diffResult.wasTruncated) {
+          const truncatedCount = diffResult.stats.filesTruncated.length;
+          const skippedCount = diffResult.stats.filesSkipped.length;
           vscode.window.showWarningMessage(
-            "Some files were truncated. AI description may be incomplete.",
+            `${truncatedCount} file(s) truncated, ${skippedCount} noise file(s) skipped. AI description based on filtered diff.`,
           );
         }
 
         const content = await geminiService.generatePrContent(
-          diff,
+          diffResult,
           config.titleTemplate,
           config.descriptionTemplate,
           branchName,

@@ -1,4 +1,4 @@
-import { GeminiPrContent } from "../types";
+import { GeminiPrContent, DiffResult } from "../types";
 
 /**
  * Service for interacting with Google Gemini API
@@ -28,10 +28,10 @@ export class GeminiService {
   }
 
   /**
-   * Generate PR title and description from a diff
+   * Generate PR title and description from a diff result
    */
   async generatePrContent(
-    diff: string,
+    diffResult: DiffResult,
     titleTemplate: string,
     descriptionTemplate: string,
     branchName?: string,
@@ -42,19 +42,43 @@ export class GeminiService {
       );
     }
 
-    const branchInfo = branchName ? `\nBranch Name: ${branchName}` : "";
+    // Build context sections
+    const branchInfo = branchName ? `Branch: ${branchName}` : "";
+
+    const commitsSection =
+      diffResult.commitMessages.length > 0
+        ? `Recent Commits:\n${diffResult.commitMessages.map((c) => `- ${c}`).join("\n")}`
+        : "";
+
+    const statsSection = `Diff Statistics:
+- Files changed: ${diffResult.stats.filesChanged}
+- Lines added: +${diffResult.stats.linesAdded}
+- Lines deleted: -${diffResult.stats.linesDeleted}${
+      diffResult.stats.filesSkipped.length > 0
+        ? `\n- Skipped (noise): ${diffResult.stats.filesSkipped.length} files (${diffResult.stats.filesSkipped.slice(0, 5).join(", ")}${diffResult.stats.filesSkipped.length > 5 ? "..." : ""})`
+        : ""
+    }${
+      diffResult.stats.filesTruncated.length > 0
+        ? `\n- Truncated: ${diffResult.stats.filesTruncated.length} files (${diffResult.stats.filesTruncated.slice(0, 5).join(", ")}${diffResult.stats.filesTruncated.length > 5 ? "..." : ""})`
+        : ""
+    }`;
 
     const prompt = `You are a helpful assistant that generates GitHub Pull Request titles and descriptions.
 
 Title Instructions: ${titleTemplate}
 Description Instructions: ${descriptionTemplate}
+
 ${branchInfo}
 
-Based on the following git diff, generate a PR title and description. The title should be concise and descriptive. The description should follow the template instructions provided. 
-${!branchName ? "" : `Use the git branch name to fill in any placeholders in the template.`}
+${commitsSection}
+
+${statsSection}
+
+Based on the following git diff, generate a PR title and description. The title should be concise and descriptive. Both the title and description should follow their respective template instructions provided.
+${branchName ? "Use the branch name and commit messages to understand the intent of changes." : ""}
 
 \`\`\`diff
-${diff}
+${diffResult.diff}
 \`\`\`
 
 Respond ONLY with valid JSON in this exact format (no markdown, no code blocks, just raw JSON):

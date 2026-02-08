@@ -6,6 +6,8 @@ import {
   CreatePrOptions,
   UpdatePrOptions,
   GitHubUser,
+  DiffResult,
+  DiffStats,
 } from "../types";
 
 const execAsync = promisify(exec);
@@ -15,6 +17,35 @@ const execAsync = promisify(exec);
  */
 export class GitHubCliService {
   private workspaceRoot: string;
+
+  // Files to skip entirely (noise files that don't help LLM understanding)
+  private static readonly SKIP_PATTERNS: RegExp[] = [
+    /package-lock\.json$/,
+    /yarn\.lock$/,
+    /pnpm-lock\.yaml$/,
+    /\.min\.(js|css)$/,
+    /\.map$/,
+    /\.snap$/,
+    /dist\//,
+    /build\//,
+    /coverage\//,
+    /\.generated\./,
+    /node_modules\//,
+  ];
+
+  // High priority files get more lines (source code)
+  private static readonly HIGH_PRIORITY_PATTERNS: RegExp[] = [
+    /^src\//,
+    /\.tsx?$/,
+    /\.jsx?$/,
+    /test\.(ts|js|tsx|jsx)$/,
+    /spec\.(ts|js|tsx|jsx)$/,
+  ];
+
+  // Line limits per file type
+  private static readonly DEFAULT_LINES_PER_FILE = 100;
+  private static readonly PRIORITY_LINES_PER_FILE = 200;
+  private static readonly MAX_TOTAL_CHARS = 100_000;
 
   constructor() {
     const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -212,11 +243,9 @@ export class GitHubCliService {
 
   /**
    * Get the diff between the current branch and base branch
-   * Truncates each file to 100 lines as per user requirement
+   * Includes smart filtering, commit messages, and enhanced stats
    */
-  async getDiff(
-    baseBranch: string,
-  ): Promise<{ diff: string; wasTruncated: boolean }> {
+  async getDiff(baseBranch: string): Promise<DiffResult> {
     try {
       // First, fetch to ensure we have the latest remote refs
       await this.execute("git fetch origin");
@@ -232,49 +261,193 @@ export class GitHubCliService {
       diff = await this.execute(`git diff ${baseBranch}...HEAD`);
     }
 
-    return this.truncateDiff(diff);
+    // Get commit messages for additional context
+    const commitMessages = await this.getCommitMessages(baseBranch);
+
+    // Get diff stats from git
+    const rawStats = await this.getDiffStats(baseBranch);
+
+    // Process the diff with filtering and truncation
+    return this.processDiff(diff, commitMessages, rawStats);
   }
 
   /**
-   * Truncate diff to 100 lines per file
+   * Get commit messages between base branch and HEAD
    */
-  private truncateDiff(diff: string): { diff: string; wasTruncated: boolean } {
+  async getCommitMessages(baseBranch: string): Promise<string[]> {
+    try {
+      const output = await this.execute(
+        `git log --oneline origin/${baseBranch}..HEAD`,
+      );
+      return output
+        .split("\n")
+        .filter((line) => line.trim())
+        .slice(0, 20); // Limit to 20 commits
+    } catch {
+      try {
+        const output = await this.execute(
+          `git log --oneline ${baseBranch}..HEAD`,
+        );
+        return output
+          .split("\n")
+          .filter((line) => line.trim())
+          .slice(0, 20);
+      } catch {
+        return [];
+      }
+    }
+  }
+
+  /**
+   * Get diff statistics from git
+   */
+  private async getDiffStats(
+    baseBranch: string,
+  ): Promise<{ additions: number; deletions: number }> {
+    try {
+      const output = await this.execute(
+        `git diff --shortstat origin/${baseBranch}...HEAD`,
+      );
+      const additions = parseInt(output.match(/(\d+) insertion/)?.[1] || "0");
+      const deletions = parseInt(output.match(/(\d+) deletion/)?.[1] || "0");
+      return { additions, deletions };
+    } catch {
+      return { additions: 0, deletions: 0 };
+    }
+  }
+
+  /**
+   * Check if a file path matches any of the skip patterns
+   */
+  private shouldSkipFile(filePath: string): boolean {
+    return GitHubCliService.SKIP_PATTERNS.some((pattern) =>
+      pattern.test(filePath),
+    );
+  }
+
+  /**
+   * Check if a file path is high priority (gets more lines)
+   */
+  private isHighPriorityFile(filePath: string): boolean {
+    return GitHubCliService.HIGH_PRIORITY_PATTERNS.some((pattern) =>
+      pattern.test(filePath),
+    );
+  }
+
+  /**
+   * Get the line limit for a file based on its priority
+   */
+  private getLineLimitForFile(filePath: string): number {
+    return this.isHighPriorityFile(filePath)
+      ? GitHubCliService.PRIORITY_LINES_PER_FILE
+      : GitHubCliService.DEFAULT_LINES_PER_FILE;
+  }
+
+  /**
+   * Extract file path from diff header line
+   */
+  private extractFilePath(diffHeader: string): string {
+    // diff --git a/path/to/file b/path/to/file
+    const match = diffHeader.match(/diff --git a\/(.+?) b\//);
+    return match?.[1] || "";
+  }
+
+  /**
+   * Process diff with smart filtering, priority-based limits, and stats tracking
+   */
+  private processDiff(
+    diff: string,
+    commitMessages: string[],
+    rawStats: { additions: number; deletions: number },
+  ): DiffResult {
     const lines = diff.split("\n");
     const result: string[] = [];
+    const stats: DiffStats = {
+      filesChanged: 0,
+      linesAdded: rawStats.additions,
+      linesDeleted: rawStats.deletions,
+      filesSkipped: [],
+      filesTruncated: [],
+    };
+
     let wasTruncated = false;
     let currentFileLines = 0;
-    let inFile = false;
+    let currentFilePath = "";
+    let currentLineLimit = GitHubCliService.DEFAULT_LINES_PER_FILE;
+    let skipCurrentFile = false;
     let skipUntilNextFile = false;
+    let totalChars = 0;
+    let globalLimitReached = false;
 
     for (const line of lines) {
+      // Check global character limit
+      if (
+        totalChars >= GitHubCliService.MAX_TOTAL_CHARS &&
+        !globalLimitReached
+      ) {
+        result.push(
+          "\n... [global limit reached - remaining files truncated] ...",
+        );
+        globalLimitReached = true;
+        wasTruncated = true;
+      }
+
+      if (globalLimitReached) {
+        // Still track file headers for stats
+        if (line.startsWith("diff --git")) {
+          const filePath = this.extractFilePath(line);
+          if (filePath && !this.shouldSkipFile(filePath)) {
+            stats.filesTruncated.push(filePath);
+          }
+        }
+        continue;
+      }
+
       // Check if this is a new file header
       if (line.startsWith("diff --git")) {
-        inFile = true;
+        currentFilePath = this.extractFilePath(line);
         currentFileLines = 0;
         skipUntilNextFile = false;
-        result.push(line);
-        continue;
-      }
 
-      if (skipUntilNextFile) {
-        continue;
-      }
-
-      if (inFile) {
-        currentFileLines++;
-        if (currentFileLines <= 100) {
-          result.push(line);
-        } else if (currentFileLines === 101) {
-          result.push("... [truncated - file exceeds 100 lines] ...");
-          wasTruncated = true;
-          skipUntilNextFile = true;
+        // Check if this file should be skipped
+        if (this.shouldSkipFile(currentFilePath)) {
+          skipCurrentFile = true;
+          stats.filesSkipped.push(currentFilePath);
+          continue;
         }
-      } else {
+
+        skipCurrentFile = false;
+        stats.filesChanged++;
+        currentLineLimit = this.getLineLimitForFile(currentFilePath);
         result.push(line);
+        totalChars += line.length + 1;
+        continue;
+      }
+
+      if (skipCurrentFile || skipUntilNextFile) {
+        continue;
+      }
+
+      currentFileLines++;
+      if (currentFileLines <= currentLineLimit) {
+        result.push(line);
+        totalChars += line.length + 1;
+      } else if (currentFileLines === currentLineLimit + 1) {
+        const truncMsg = `... [truncated - file exceeds ${currentLineLimit} lines] ...`;
+        result.push(truncMsg);
+        totalChars += truncMsg.length + 1;
+        stats.filesTruncated.push(currentFilePath);
+        wasTruncated = true;
+        skipUntilNextFile = true;
       }
     }
 
-    return { diff: result.join("\n"), wasTruncated };
+    return {
+      diff: result.join("\n"),
+      stats,
+      commitMessages,
+      wasTruncated,
+    };
   }
 
   /**
@@ -306,7 +479,7 @@ export class GitHubCliService {
   async setupCopilotAlias(): Promise<void> {
     try {
       await this.execute(
-        'gh alias set copilot-review \'api --method POST /repos/$1/pulls/$2/requested_reviewers -f "reviewers[]=copilot-pull-request-reviewer[bot]"\''
+        "gh alias set copilot-review 'api --method POST /repos/$1/pulls/$2/requested_reviewers -f \"reviewers[]=copilot-pull-request-reviewer[bot]\"'",
       );
     } catch (error) {
       console.error("Failed to setup copilot alias:", error);
@@ -330,15 +503,17 @@ export class GitHubCliService {
    */
   async assignCopilotReviewer(prNumber: number): Promise<void> {
     const remoteUrl = await this.execute("git remote get-url origin");
-    const match = remoteUrl.match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
-    
+    const match = remoteUrl.match(
+      /github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/,
+    );
+
     if (!match) {
       throw new Error("Could not parse repository owner/name from remote URL");
     }
 
     const owner = match[1];
     const repo = match[2];
-    
+
     await this.execute(`gh copilot-review ${owner}/${repo} ${prNumber}`);
   }
 
