@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { PrTreeProvider, PrTreeItem } from "./views/prTreeProvider";
 import { DescriptionPanel } from "./views/descriptionPanel";
 import { GitHubCliService } from "./services/githubCliService";
-import { GeminiService } from "./services/geminiService";
+import { AIService } from "./services/aiService";
 import { ConfigService } from "./services/configService";
 
 // Git extension API types
@@ -25,7 +25,7 @@ interface PublishEvent {
 }
 
 let ghService: GitHubCliService;
-let geminiService: GeminiService;
+let aiService: AIService;
 let configService: ConfigService;
 let prTreeProvider: PrTreeProvider;
 
@@ -35,12 +35,20 @@ export function activate(context: vscode.ExtensionContext): void {
   // Initialize services
   configService = new ConfigService();
   ghService = new GitHubCliService();
-  geminiService = new GeminiService(configService.geminiApiKey);
+  aiService = new AIService(
+    configService.provider,
+    configService.providerApiKey,
+    configService.model,
+  );
 
-  // Update Gemini API key when settings change
+  // Update AI service when settings change
   context.subscriptions.push(
     configService.onDidChangeConfiguration(() => {
-      geminiService.setApiKey(configService.geminiApiKey);
+      aiService.reconfigure(
+        configService.provider,
+        configService.providerApiKey,
+        configService.model,
+      );
     }),
   );
 
@@ -184,7 +192,7 @@ function registerCommands(context: vscode.ExtensionContext): void {
         DescriptionPanel.createOrShow(
           context.extensionUri,
           ghService,
-          geminiService,
+          aiService,
           configService,
           pr.body || "",
           () => prTreeProvider.refresh(),
@@ -309,7 +317,7 @@ async function createPr(): Promise<void> {
 
         progress.report({ message: "Generating content with AI..." });
 
-        if (geminiService.isConfigured()) {
+        if (aiService.isConfigured()) {
           const diffResult = await ghService.getDiff(config.baseBranch);
           const branchName = await ghService.getCurrentBranch();
 
@@ -321,7 +329,7 @@ async function createPr(): Promise<void> {
             );
           }
 
-          const content = await geminiService.generatePrContent(
+          const content = await aiService.generatePrContent(
             diffResult,
             config.titleTemplate,
             config.descriptionTemplate,
@@ -335,7 +343,7 @@ async function createPr(): Promise<void> {
         } else {
           vscode.window
             .showWarningMessage(
-              "Gemini API key not configured. Configure it to generate PR content.",
+              "AI provider not configured. Set your provider, API key, and model in settings.",
               "Open Settings",
             )
             .then((action) => {
@@ -399,7 +407,7 @@ async function regenerateContent(): Promise<void> {
           );
         }
 
-        const content = await geminiService.generatePrContent(
+        const content = await aiService.generatePrContent(
           diffResult,
           config.titleTemplate,
           config.descriptionTemplate,

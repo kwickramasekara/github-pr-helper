@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { ExtensionConfig } from "../types";
+import { AIProvider, ExtensionConfig } from "../types";
 
 /**
  * Centralized configuration service for the extension
@@ -11,8 +11,22 @@ export class ConfigService {
     return vscode.workspace.getConfiguration(ConfigService.NAMESPACE);
   }
 
-  get geminiApiKey(): string {
-    return this.config.get<string>("geminiApiKey", "");
+  get provider(): AIProvider {
+    return this.config.get<AIProvider>("provider", "google");
+  }
+
+  get providerApiKey(): string {
+    return this.config.get<string>("providerApiKey", "");
+  }
+
+  get model(): string {
+    const model = this.config.get<string>("model", "google/gemini-2.5-flash");
+    if (model === "custom") {
+      return this.config.get<string>("customModel", "");
+    }
+    // Strip the provider prefix (e.g., "google/gemini-2.5-flash" → "gemini-2.5-flash")
+    const slashIndex = model.indexOf("/");
+    return slashIndex >= 0 ? model.substring(slashIndex + 1) : model;
   }
 
   get baseBranch(): string {
@@ -51,7 +65,9 @@ export class ConfigService {
   /** Get all configuration as an object */
   getAll(): ExtensionConfig {
     return {
-      geminiApiKey: this.geminiApiKey,
+      provider: this.provider,
+      providerApiKey: this.providerApiKey,
+      model: this.model,
       baseBranch: this.baseBranch,
       defaultReviewers: this.defaultReviewers,
       titleTemplate: this.titleTemplate,
@@ -63,14 +79,14 @@ export class ConfigService {
 
   /** Check if the extension is properly configured */
   isConfigured(): boolean {
-    return this.geminiApiKey.length > 0;
+    return this.providerApiKey.length > 0 && this.model.length > 0;
   }
 
   /** Open the settings UI for this extension */
   async openSettings(): Promise<void> {
     await vscode.commands.executeCommand(
       "workbench.action.openSettings",
-      "GitHub PR Helper",
+      "@ext:kwickramasekara.github-pr-helper",
     );
   }
 

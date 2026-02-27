@@ -2,9 +2,14 @@
  * Type definitions for GitHub PR Helper extension
  */
 
+/** Supported AI providers */
+export type AIProvider = "google" | "openai" | "anthropic";
+
 /** Configuration options for the extension */
 export interface ExtensionConfig {
-  geminiApiKey: string;
+  provider: AIProvider;
+  providerApiKey: string;
+  model: string;
   baseBranch: string;
   defaultReviewers: string[];
   titleTemplate: string;
@@ -59,8 +64,8 @@ export interface UpdatePrOptions {
   removeAssignees?: string[];
 }
 
-/** Response from Gemini API */
-export interface GeminiPrContent {
+/** Response from AI provider */
+export interface AIPrContent {
   title: string;
   description: string;
 }

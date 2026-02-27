@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { GitHubCliService } from "../services/githubCliService";
-import { GeminiService } from "../services/geminiService";
+import { AIService } from "../services/aiService";
 import { ConfigService } from "../services/configService";
 
 /**
@@ -17,7 +17,7 @@ export class DescriptionPanel {
     panel: vscode.WebviewPanel,
     private readonly extensionUri: vscode.Uri,
     private readonly ghService: GitHubCliService,
-    private readonly geminiService: GeminiService,
+    private readonly aiService: AIService,
     private readonly configService: ConfigService,
     description: string,
     private readonly onDescriptionChanged: () => void,
@@ -51,7 +51,7 @@ export class DescriptionPanel {
   public static createOrShow(
     extensionUri: vscode.Uri,
     ghService: GitHubCliService,
-    geminiService: GeminiService,
+    aiService: AIService,
     configService: ConfigService,
     description: string,
     onDescriptionChanged: () => void,
@@ -80,7 +80,7 @@ export class DescriptionPanel {
       panel,
       extensionUri,
       ghService,
-      geminiService,
+      aiService,
       configService,
       description,
       onDescriptionChanged,
@@ -126,7 +126,7 @@ export class DescriptionPanel {
         );
       }
 
-      const content = await this.geminiService.generatePrContent(
+      const content = await this.aiService.generatePrContent(
         diffResult,
         config.titleTemplate,
         config.descriptionTemplate,
