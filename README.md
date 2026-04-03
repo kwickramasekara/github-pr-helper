@@ -1,12 +1,12 @@
 # GitHub PR Helper
 
-A VS Code extension that streamlines GitHub pull request creation with AI-powered descriptions. Supports **Google Gemini**, **OpenAI**, and **Anthropic** models.
+A VS Code extension that streamlines GitHub pull request creation with AI-powered descriptions using **OpenCode**.
 
 ## Features
 
 - 🚀 **One-click PR Creation**: Create draft PRs with a single click
-- 🤖 **AI-Powered Descriptions**: Automatically generate PR titles and descriptions using your choice of AI provider
-- 🔄 **Multi-Provider Support**: Choose between Google Gemini, OpenAI, or Anthropic
+- 🤖 **AI-Powered Descriptions**: Automatically generate PR titles and descriptions with OpenCode
+- 🧠 **Full Repo Context**: OpenCode can inspect git history, diffs, and project files directly
 - 🔔 **Push Detection**: Optionally prompt to create a PR when you push a new branch
 - ✏️ **Inline Editing**: Edit PR title, description, and reviewers directly in VS Code
 - 🎨 **Native UI**: Beautiful sidebar that matches your VS Code theme
@@ -16,30 +16,23 @@ A VS Code extension that streamlines GitHub pull request creation with AI-powere
 
 - **GitHub CLI (gh)**: This extension uses the GitHub CLI for all GitHub operations. [Install it here](https://cli.github.com/).
   - Run `gh auth login` to authenticate with your GitHub account.
-- **AI Provider API Key**: Obtain an API key from your chosen provider:
-  - [Google AI Studio](https://aistudio.google.com/apikey) (Gemini)
-  - [OpenAI Platform](https://platform.openai.com/api-keys) (GPT)
-  - [Anthropic Console](https://console.anthropic.com/) (Claude)
+- **OpenCode CLI (`opencode`)**: Install OpenCode from [opencode.ai/docs](https://opencode.ai/docs/).
 
 ## Getting Started
 
 1. Install the extension
 2. Make sure `gh` CLI is installed and authenticated
-3. Configure your AI provider and API key in Settings → GitHub PR Helper
+3. Optionally configure OpenCode options in Settings → GitHub PR Helper
 4. Open a Git repository and create your first PR!
 
 ## Extension Settings
 
 | Setting                                | Description                                                   | Default                   |
 | -------------------------------------- | ------------------------------------------------------------- | ------------------------- |
-| `githubPrHelper.provider`              | AI provider (`google`, `openai`, `anthropic`)                 | `google`                  |
-| `githubPrHelper.providerApiKey`        | API key for the selected AI provider                          | (empty)                   |
-| `githubPrHelper.model`                 | AI model to use (preset list or `custom`)                     | `google/gemini-2.5-flash` |
-| `githubPrHelper.customModel`           | Custom model ID (when model is set to `custom`)               | (empty)                   |
 | `githubPrHelper.baseBranch`            | Default base branch for PRs                                   | `main`                    |
 | `githubPrHelper.defaultReviewers`      | Default reviewers (GitHub usernames or team slugs)            | `[]`                      |
-| `githubPrHelper.titleTemplate`         | Custom instructions for title generation                      | (default prompt)          |
-| `githubPrHelper.descriptionTemplate`   | Custom instructions for description generation                | (default prompt)          |
+| `githubPrHelper.opencodeConfig`        | Optional OpenCode SDK config object                           | `{}`                      |
+| `githubPrHelper.prTemplatePath`        | Optional PR template path (relative to workspace root)        | `""`                     |
 | `githubPrHelper.promptOnBranchPublish` | Behavior when pushing a new branch (`ask`, `always`, `never`) | `ask`                     |
 | `githubPrHelper.enableCopilotReviewer` | Automatically assign Copilot as reviewer on PR creation       | `false`                   |
 
@@ -60,9 +53,9 @@ A VS Code extension that streamlines GitHub pull request creation with AI-powere
 - **Description**: Click "Description" to open a panel with Preview/Edit tabs and markdown rendering
 - **Reviewers**: Click the **+** icon on "Reviewers" to add, or the **×** icon next to a reviewer to remove
 
-### Regenerating AI Content
+### Regenerating Content
 
-Click the ✨ sparkle icon next to the description to regenerate the title and description with AI.
+Click the ✨ sparkle icon next to the description to regenerate the title and description with OpenCode.
 
 ## Commands
 
@@ -73,7 +66,7 @@ Click the ✨ sparkle icon next to the description to regenerate the title and d
 | `GitHub PR Helper: Mark as Ready for Review` | Convert draft to regular PR      |
 | `GitHub PR Helper: Open in GitHub`           | Open the PR in your browser      |
 | `GitHub PR Helper: Settings`                 | Open extension settings          |
-| `GitHub PR Helper: Regenerate with AI`       | Regenerate title and description |
+| `GitHub PR Helper: Regenerate with OpenCode` | Regenerate title and description |
 
 ## Development
 

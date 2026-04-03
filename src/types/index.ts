@@ -2,18 +2,12 @@
  * Type definitions for GitHub PR Helper extension
  */
 
-/** Supported AI providers */
-export type AIProvider = "google" | "openai" | "anthropic";
-
 /** Configuration options for the extension */
 export interface ExtensionConfig {
-  provider: AIProvider;
-  providerApiKey: string;
-  model: string;
   baseBranch: string;
   defaultReviewers: string[];
-  titleTemplate: string;
-  descriptionTemplate: string;
+  opencodeConfig: Record<string, unknown>;
+  prTemplatePath: string;
   promptOnBranchPublish: "ask" | "always" | "never";
   enableCopilotReviewer: boolean;
 }
@@ -64,8 +58,8 @@ export interface UpdatePrOptions {
   removeAssignees?: string[];
 }
 
-/** Response from AI provider */
-export interface AIPrContent {
+/** Generated pull request content */
+export interface PrContent {
   title: string;
   description: string;
 }
@@ -90,20 +84,3 @@ export type ExtensionMessage =
   | { type: "error"; message: string }
   | { type: "success"; message: string }
   | { type: "ghCliStatus"; isAuthenticated: boolean; error?: string };
-
-/** Statistics about the diff */
-export interface DiffStats {
-  filesChanged: number;
-  linesAdded: number;
-  linesDeleted: number;
-  filesSkipped: string[];
-  filesTruncated: string[];
-}
-
-/** Result from getDiff with enhanced metadata */
-export interface DiffResult {
-  diff: string;
-  stats: DiffStats;
-  commitMessages: string[];
-  wasTruncated: boolean;
-}

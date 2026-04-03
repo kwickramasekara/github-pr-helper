@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { AIProvider, ExtensionConfig } from "../types";
+import { ExtensionConfig } from "../types";
 
 /**
  * Centralized configuration service for the extension
@@ -11,24 +11,6 @@ export class ConfigService {
     return vscode.workspace.getConfiguration(ConfigService.NAMESPACE);
   }
 
-  get provider(): AIProvider {
-    return this.config.get<AIProvider>("provider", "google");
-  }
-
-  get providerApiKey(): string {
-    return this.config.get<string>("providerApiKey", "");
-  }
-
-  get model(): string {
-    const model = this.config.get<string>("model", "google/gemini-2.5-flash");
-    if (model === "custom") {
-      return this.config.get<string>("customModel", "");
-    }
-    // Strip the provider prefix (e.g., "google/gemini-2.5-flash" → "gemini-2.5-flash")
-    const slashIndex = model.indexOf("/");
-    return slashIndex >= 0 ? model.substring(slashIndex + 1) : model;
-  }
-
   get baseBranch(): string {
     return this.config.get<string>("baseBranch", "main");
   }
@@ -37,18 +19,16 @@ export class ConfigService {
     return this.config.get<string[]>("defaultReviewers", []);
   }
 
-  get titleTemplate(): string {
-    return this.config.get<string>(
-      "titleTemplate",
-      "Generate a concise PR title (max 72 chars) that summarizes the changes",
-    );
+  get opencodeConfig(): Record<string, unknown> {
+    const config = this.config.get<Record<string, unknown>>("opencodeConfig", {});
+    if (!config || typeof config !== "object" || Array.isArray(config)) {
+      return {};
+    }
+    return config;
   }
 
-  get descriptionTemplate(): string {
-    return this.config.get<string>(
-      "descriptionTemplate",
-      "Generate a PR description with: ## Summary, ## Changes Made (bullet points), ## Testing Notes",
-    );
+  get prTemplatePath(): string {
+    return this.config.get<string>("prTemplatePath", "");
   }
 
   get promptOnBranchPublish(): "ask" | "always" | "never" {
@@ -65,21 +45,13 @@ export class ConfigService {
   /** Get all configuration as an object */
   getAll(): ExtensionConfig {
     return {
-      provider: this.provider,
-      providerApiKey: this.providerApiKey,
-      model: this.model,
       baseBranch: this.baseBranch,
       defaultReviewers: this.defaultReviewers,
-      titleTemplate: this.titleTemplate,
-      descriptionTemplate: this.descriptionTemplate,
+      opencodeConfig: this.opencodeConfig,
+      prTemplatePath: this.prTemplatePath,
       promptOnBranchPublish: this.promptOnBranchPublish,
       enableCopilotReviewer: this.enableCopilotReviewer,
     };
-  }
-
-  /** Check if the extension is properly configured */
-  isConfigured(): boolean {
-    return this.providerApiKey.length > 0 && this.model.length > 0;
   }
 
   /** Open the settings UI for this extension */
