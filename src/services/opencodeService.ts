@@ -20,7 +20,8 @@ export class OpencodeService {
   }
 
   async isAvailable(): Promise<boolean> {
-    const command = process.platform === "win32" ? "where opencode" : "command -v opencode";
+    const command =
+      process.platform === "win32" ? "where opencode" : "command -v opencode";
     try {
       await execAsync(command, { cwd: this.workspaceRoot });
       return true;
@@ -56,7 +57,8 @@ export class OpencodeService {
 
     try {
       const session = await opencode.client.session.create({
-        body: { title: "PR generation" },
+        query: { directory: this.workspaceRoot },
+        body: { title: "[SDK] PR Info Generation" },
       });
 
       if (!session.data) {
@@ -166,7 +168,10 @@ export class OpencodeService {
       );
     }
 
-    lines.push("", "The title should be concise (max 72 characters) and descriptive.");
+    lines.push(
+      "",
+      "The title should be concise (max 72 characters) and descriptive.",
+    );
 
     return lines.join("\n");
   }
