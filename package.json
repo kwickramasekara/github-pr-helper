@@ -1,8 +1,8 @@
 {
   "name": "github-pr-helper",
   "displayName": "GitHub PR Helper",
-  "description": "Streamline GitHub pull request creation with AI-powered descriptions using Google Gemini, OpenAI, or Anthropic",
-  "version": "1.2.0",
+  "description": "Streamline GitHub pull request creation with AI-powered descriptions using OpenCode",
+  "version": "2.0.0",
   "publisher": "kwickramasekara",
   "repository": "https://github.com/kwickramasekara/github-pr-helper",
   "icon": "resources/icon.png",
@@ -91,7 +91,7 @@
       },
       {
         "command": "githubPrHelper.regenerate",
-        "title": "Regenerate with AI",
+        "title": "Regenerate with OpenCode",
         "category": "GitHub PR Helper",
         "icon": "$(sparkle)"
       }
@@ -160,63 +160,11 @@
     "configuration": {
       "title": "GitHub PR Helper",
       "properties": {
-        "githubPrHelper.provider": {
-          "type": "string",
-          "enum": [
-            "google",
-            "openai",
-            "anthropic"
-          ],
-          "enumDescriptions": [
-            "Google Gemini (requires a Google Gemini API key)",
-            "OpenAI (requires an OpenAI API key)",
-            "Anthropic (requires an Anthropic API key)"
-          ],
-          "default": "google",
-          "description": "AI provider to use for PR content generation",
-          "order": 1
-        },
-        "githubPrHelper.providerApiKey": {
-          "type": "string",
-          "default": "",
-          "description": "API key for the selected AI provider",
-          "order": 2
-        },
-        "githubPrHelper.model": {
-          "type": "string",
-          "enum": [
-            "google/gemini-2.5-flash",
-            "google/gemini-3.1-flash",
-            "openai/gpt-4.1-mini",
-            "openai/gpt-5-mini",
-            "anthropic/claude-sonnet-4-6",
-            "anthropic/claude-haiku-4-5",
-            "custom"
-          ],
-          "enumDescriptions": [
-            "Google Gemini 2.5 Flash — fast and cost-efficient",
-            "Google Gemini 3.1 Flash — latest frontier Flash model",
-            "OpenAI GPT-4.1 Mini — fast, great for coding tasks",
-            "OpenAI GPT-5 Mini — compact, cost-efficient reasoning",
-            "Anthropic Claude Sonnet 4.6 — frontier coding and agents",
-            "Anthropic Claude Haiku 4.5 — fastest Anthropic model",
-            "Custom — enter your own model ID below"
-          ],
-          "default": "google/gemini-2.5-flash",
-          "description": "AI model to use. Select a preset or choose 'custom' to enter a model ID manually.",
-          "order": 3
-        },
-        "githubPrHelper.customModel": {
-          "type": "string",
-          "default": "",
-          "description": "Custom model ID (only used when AI Model is set to 'custom'). Find model IDs in the provider's API docs: Google (ai.google.dev/gemini-api/docs/models), OpenAI (platform.openai.com/docs/models), Anthropic (docs.anthropic.com/en/docs/about-claude/models).",
-          "order": 4
-        },
         "githubPrHelper.baseBranch": {
           "type": "string",
           "default": "main",
           "description": "Default base branch for PRs",
-          "order": 5
+          "order": 1
         },
         "githubPrHelper.defaultReviewers": {
           "type": "array",
@@ -225,19 +173,19 @@
           },
           "default": [],
           "description": "Default reviewers (GitHub usernames or team slugs)",
-          "order": 6
+          "order": 2
         },
-        "githubPrHelper.titleTemplate": {
-          "type": "string",
-          "default": "Generate a concise PR title (max 72 chars) that summarizes the changes",
-          "description": "Custom instructions for LLM title generation",
-          "order": 7
+        "githubPrHelper.opencodeConfig": {
+          "type": "object",
+          "default": {},
+          "description": "Optional OpenCode configuration object (e.g., {\"model\": \"anthropic/claude-sonnet-4-5\"}). Passed to the OpenCode SDK. See https://opencode.ai/docs/config for options.",
+          "order": 3
         },
-        "githubPrHelper.descriptionTemplate": {
+        "githubPrHelper.prTemplatePath": {
           "type": "string",
-          "default": "Generate a PR description with: ## Summary, ## Changes Made (bullet points), ## Testing Notes",
-          "description": "Custom instructions for LLM description generation",
-          "order": 8
+          "default": "",
+          "description": "Path to a PR template file (relative to workspace root). If set, OpenCode will reference this template when generating the PR description. Example: .github/pull_request_template.md",
+          "order": 4
         },
         "githubPrHelper.promptOnBranchPublish": {
           "type": "string",
@@ -253,13 +201,13 @@
           ],
           "default": "ask",
           "description": "Behavior when a branch is published to remote",
-          "order": 9
+          "order": 5
         },
         "githubPrHelper.enableCopilotReviewer": {
           "type": "boolean",
           "default": false,
           "description": "Automatically assign GitHub Copilot as a reviewer when creating PRs",
-          "order": 7
+          "order": 6
         }
       }
     },
@@ -308,10 +256,7 @@
     "typescript": "^5.3.2"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^2.0.0",
-    "@ai-sdk/google": "^2.0.0",
-    "@ai-sdk/openai": "^2.0.0",
-    "ai": "^5.0.0",
+    "@opencode-ai/sdk": "^1.3.13",
     "marked": "^12.0.0"
   },
   "license": "MIT"

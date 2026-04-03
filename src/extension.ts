@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { PrTreeProvider, PrTreeItem } from "./views/prTreeProvider";
 import { DescriptionPanel } from "./views/descriptionPanel";
 import { GitHubCliService } from "./services/githubCliService";
-import { AIService } from "./services/aiService";
+import { OpencodeService } from "./services/opencodeService";
 import { ConfigService } from "./services/configService";
 
 // Git extension API types
@@ -25,7 +25,7 @@ interface PublishEvent {
 }
 
 let ghService: GitHubCliService;
-let aiService: AIService;
+let opencodeService: OpencodeService;
 let configService: ConfigService;
 let prTreeProvider: PrTreeProvider;
 
@@ -35,20 +35,17 @@ export function activate(context: vscode.ExtensionContext): void {
   // Initialize services
   configService = new ConfigService();
   ghService = new GitHubCliService();
-  aiService = new AIService(
-    configService.provider,
-    configService.providerApiKey,
-    configService.model,
+  const workspaceRoot =
+    vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+  opencodeService = new OpencodeService(
+    configService.opencodeConfig,
+    workspaceRoot,
   );
 
-  // Update AI service when settings change
+  // Update OpenCode service when settings change
   context.subscriptions.push(
     configService.onDidChangeConfiguration(() => {
-      aiService.reconfigure(
-        configService.provider,
-        configService.providerApiKey,
-        configService.model,
-      );
+      opencodeService.reconfigure(configService.opencodeConfig);
     }),
   );
 
@@ -192,7 +189,7 @@ function registerCommands(context: vscode.ExtensionContext): void {
         DescriptionPanel.createOrShow(
           context.extensionUri,
           ghService,
-          aiService,
+          opencodeService,
           configService,
           pr.body || "",
           () => prTreeProvider.refresh(),
@@ -315,25 +312,12 @@ async function createPr(): Promise<void> {
               : undefined,
         });
 
-        progress.report({ message: "Generating content with AI..." });
+        progress.report({ message: "Generating content with OpenCode..." });
 
-        if (aiService.isConfigured()) {
-          const diffResult = await ghService.getDiff(config.baseBranch);
-          const branchName = await ghService.getCurrentBranch();
-
-          if (diffResult.wasTruncated) {
-            const truncatedCount = diffResult.stats.filesTruncated.length;
-            const skippedCount = diffResult.stats.filesSkipped.length;
-            vscode.window.showWarningMessage(
-              `${truncatedCount} file(s) truncated, ${skippedCount} noise file(s) skipped. AI description based on filtered diff.`,
-            );
-          }
-
-          const content = await aiService.generatePrContent(
-            diffResult,
-            config.titleTemplate,
-            config.descriptionTemplate,
-            branchName,
+        if (await opencodeService.isAvailable()) {
+          const content = await opencodeService.generatePrContent(
+            config.baseBranch,
+            config.prTemplatePath,
           );
 
           await ghService.updatePr({
@@ -343,12 +327,14 @@ async function createPr(): Promise<void> {
         } else {
           vscode.window
             .showWarningMessage(
-              "AI provider not configured. Set your provider, API key, and model in settings.",
-              "Open Settings",
+              "OpenCode is not installed. Install it to generate PR content automatically.",
+              "Install OpenCode",
             )
             .then((action) => {
-              if (action === "Open Settings") {
-                configService.openSettings();
+              if (action === "Install OpenCode") {
+                vscode.env.openExternal(
+                  vscode.Uri.parse("https://opencode.ai/docs/"),
+                );
               }
             });
         }
@@ -384,34 +370,21 @@ async function createPr(): Promise<void> {
 }
 
 /**
- * Regenerate PR content with AI
+ * Regenerate PR content with OpenCode
  */
 async function regenerateContent(): Promise<void> {
   try {
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: "Regenerating content with AI...",
+        title: "Regenerating content with OpenCode...",
         cancellable: false,
       },
       async () => {
         const config = configService.getAll();
-        const diffResult = await ghService.getDiff(config.baseBranch);
-        const branchName = await ghService.getCurrentBranch();
-
-        if (diffResult.wasTruncated) {
-          const truncatedCount = diffResult.stats.filesTruncated.length;
-          const skippedCount = diffResult.stats.filesSkipped.length;
-          vscode.window.showWarningMessage(
-            `${truncatedCount} file(s) truncated, ${skippedCount} noise file(s) skipped. AI description based on filtered diff.`,
-          );
-        }
-
-        const content = await aiService.generatePrContent(
-          diffResult,
-          config.titleTemplate,
-          config.descriptionTemplate,
-          branchName,
+        const content = await opencodeService.generatePrContent(
+          config.baseBranch,
+          config.prTemplatePath,
         );
 
         await ghService.updatePr({

@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { GitHubCliService } from "../services/githubCliService";
-import { AIService } from "../services/aiService";
+import { OpencodeService } from "../services/opencodeService";
 import { ConfigService } from "../services/configService";
 
 /**
@@ -17,7 +17,7 @@ export class DescriptionPanel {
     panel: vscode.WebviewPanel,
     private readonly extensionUri: vscode.Uri,
     private readonly ghService: GitHubCliService,
-    private readonly aiService: AIService,
+    private readonly opencodeService: OpencodeService,
     private readonly configService: ConfigService,
     description: string,
     private readonly onDescriptionChanged: () => void,
@@ -51,7 +51,7 @@ export class DescriptionPanel {
   public static createOrShow(
     extensionUri: vscode.Uri,
     ghService: GitHubCliService,
-    aiService: AIService,
+    opencodeService: OpencodeService,
     configService: ConfigService,
     description: string,
     onDescriptionChanged: () => void,
@@ -80,7 +80,7 @@ export class DescriptionPanel {
       panel,
       extensionUri,
       ghService,
-      aiService,
+      opencodeService,
       configService,
       description,
       onDescriptionChanged,
@@ -115,22 +115,9 @@ export class DescriptionPanel {
       this._panel.webview.postMessage({ type: "regenerating" });
 
       const config = this.configService.getAll();
-      const diffResult = await this.ghService.getDiff(config.baseBranch);
-      const branchName = await this.ghService.getCurrentBranch();
-
-      if (diffResult.wasTruncated) {
-        const truncatedCount = diffResult.stats.filesTruncated.length;
-        const skippedCount = diffResult.stats.filesSkipped.length;
-        vscode.window.showWarningMessage(
-          `${truncatedCount} file(s) truncated, ${skippedCount} noise file(s) skipped. AI description based on filtered diff.`,
-        );
-      }
-
-      const content = await this.aiService.generatePrContent(
-        diffResult,
-        config.titleTemplate,
-        config.descriptionTemplate,
-        branchName,
+      const content = await this.opencodeService.generatePrContent(
+        config.baseBranch,
+        config.prTemplatePath,
       );
 
       // Save both title and description
@@ -292,7 +279,7 @@ export class DescriptionPanel {
     <textarea id="editor">${this._escapeHtml(this._description)}</textarea>
     <div class="actions">
       <button class="primary" id="save">Save</button>
-      <button class="secondary" id="regenerate">Regenerate with AI</button>
+      <button class="secondary" id="regenerate">Regenerate with OpenCode</button>
     </div>
     <div class="status" id="status"></div>
   </div>
@@ -352,7 +339,7 @@ export class DescriptionPanel {
           break;
         case 'regenerating':
           regenerateBtn.disabled = true;
-          status.textContent = 'Regenerating with AI...';
+          status.textContent = 'Regenerating with OpenCode...';
           break;
         case 'error':
           saveBtn.disabled = false;
