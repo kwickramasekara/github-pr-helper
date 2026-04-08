@@ -152,26 +152,38 @@ export class OpencodeService {
   }
 
   private buildPrompt(baseBranch: string, prTemplatePath?: string): string {
+    const templatePath = prTemplatePath?.trim();
+
     const lines = [
-      `Compare the current git branch of ${this.workspaceRoot} against its ${baseBranch} branch`,
-      "and provide a description and title for a GitHub PR.",
+      `Goal: Compare current branch to origin/${baseBranch} and output a PR title + body.`,
       "",
+      "Run the following discovery commands ONCE, in parallel where possible.",
+      "Do not run repeated git status/log/diff checks unless a command fails.",
+      "",
+      "Required command set (single pass):",
+      `1) git fetch origin ${baseBranch}`,
+      "2) git branch --show-current",
+      `3) git log --oneline origin/${baseBranch}..HEAD`,
+      `4) git diff --name-status origin/${baseBranch}...HEAD`,
+      `5) git diff --stat origin/${baseBranch}...HEAD`,
+      "",
+      "Then:",
     ];
 
-    if (prTemplatePath?.trim()) {
-      const templatePath = path.join(this.workspaceRoot, prTemplatePath.trim());
-      lines.push(
-        `Follow the PR template found at ${templatePath} for the description format.`,
-      );
-    } else {
-      lines.push(
-        "For the description, include: a summary of changes, a list of changes made, and any testing notes.",
-      );
+    if (templatePath) {
+      lines.push(`- Read ${templatePath} once.`);
     }
 
     lines.push(
-      "",
-      "The title should be concise (max 72 characters) and descriptive.",
+      "- Summarize only files in the branch diff.",
+      "- Prioritize product-impacting code changes; treat docs as supporting context.",
+      "- Produce:",
+      "  - PR title: Concise summary of key change (max 72 characters)",
+      templatePath
+        ? "  - PR description: Exact template structure filled in"
+        : "  - PR description: Include a summary of changes, a list of changes made, and any testing notes",
+      "- Do not run extra validation commands unless explicitly requested.",
+      "- Return only the final title and description.",
     );
 
     return lines.join("\n");
