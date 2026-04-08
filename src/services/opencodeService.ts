@@ -52,6 +52,7 @@ export class OpencodeService {
     };
 
     const opencode = await createOpencode({
+      port: 6083,
       config: this.opencodeConfig as never,
     });
 
